@@ -35,7 +35,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 		lock.Lock()
 		str[shu] = u.String()
-		lock.RUnlock()
+		lock.Unlock()
 
 		w.WriteHeader(http.StatusCreated)
 
