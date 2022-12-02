@@ -33,7 +33,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 		shu := GetMD5Hash(u)
 
-		lock.RLock()
+		lock.Lock()
 		str[shu] = u.String()
 		lock.RUnlock()
 
