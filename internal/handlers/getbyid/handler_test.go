@@ -1,4 +1,4 @@
-package get_by_id
+package getbyid
 
 import (
 	"io"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/izaake/go-shortener-tpl/internal/handlers/set_short_url"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/shorten"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -126,7 +126,7 @@ func NewRouter() chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{id}", Handler)
-		r.Post("/", set_short_url.Handler)
+		r.Post("/", setshorturl.Handler)
 		r.Post("/api/shorten", shorten.Handler)
 	})
 	return r

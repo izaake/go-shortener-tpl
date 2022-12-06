@@ -1,11 +1,11 @@
-package get_by_id
+package getbyid
 
 import (
 	"net/http"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/izaake/go-shortener-tpl/internal/handlers/set_short_url"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
 )
 
 var lock = sync.RWMutex{}
@@ -15,7 +15,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	shu := chi.URLParam(r, "id")
 
 	lock.RLock()
-	su := set_short_url.Str[shu]
+	su := setshorturl.Str[shu]
 	lock.RUnlock()
 
 	if su == "" {
@@ -25,5 +25,4 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("location", su)
 	w.WriteHeader(http.StatusTemporaryRedirect)
-	return
 }

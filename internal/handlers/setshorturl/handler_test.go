@@ -1,4 +1,4 @@
-package set_short_url
+package setshorturl
 
 import (
 	"io"
