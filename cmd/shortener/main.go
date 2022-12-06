@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/izaake/go-shortener-tpl/internal/handlers"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/get_by_id"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/set_short_url"
 )
 
 func main() {
@@ -17,8 +18,8 @@ func NewRouter() chi.Router {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{id}", handler.Handler)
-		r.Post("/", handler.Handler)
+		r.Get("/{id}", get_by_id.Handler)
+		r.Post("/", set_short_url.Handler)
 	})
 	return r
 }
