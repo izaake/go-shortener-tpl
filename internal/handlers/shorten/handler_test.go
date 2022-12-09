@@ -30,7 +30,7 @@ func TestHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, "http://localhost:8080/6bdb5b0e26a76e4dab7cd1a272caebc0", res.Result)
+	assert.Equal(t, "/6bdb5b0e26a76e4dab7cd1a272caebc0", res.Result)
 }
 
 func TestHandlerNegative(t *testing.T) {

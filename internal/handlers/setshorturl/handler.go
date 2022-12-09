@@ -6,11 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
-)
 
-var Str = map[string]string{}
-var lock = sync.RWMutex{}
+	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+)
 
 // Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -22,13 +21,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	shortU := GetMD5Hash(u)
 
-	lock.Lock()
-	Str[shortU] = u.String()
-	lock.Unlock()
+	repo := urls.NewRepository()
+	repo.Save(models.URL{ShortURL: shortU, FullURL: u.String()})
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte("http://localhost:8080/" + shortU))
+	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortU))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

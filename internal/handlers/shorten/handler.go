@@ -8,12 +8,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sync"
 
-	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
+	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 )
-
-var lock = sync.RWMutex{}
 
 // URLData содержит в себе полную версию ссылки
 type URLData struct {
@@ -35,15 +33,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	shortU := GetMD5Hash(u.URL)
 
-	lock.Lock()
-	setshorturl.Str[shortU] = u.URL
-	lock.Unlock()
+	repo := urls.NewRepository()
+	repo.Save(models.URL{ShortURL: shortU, FullURL: u.URL})
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 
 	res := Response{}
-	res.Result = "http://localhost:8080/" + shortU
+	res.Result = repo.GetBaseURL() + "/" + shortU
 	result, err := json.Marshal(res)
 	if err != nil {
 		log.Fatal(err)
