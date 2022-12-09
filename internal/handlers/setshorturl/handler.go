@@ -4,10 +4,17 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
+
+	"github.com/caarlos0/env"
 )
+
+type Config struct {
+	BaseURL string `env:"BASE_URL"`
+}
 
 var Str = map[string]string{}
 var lock = sync.RWMutex{}
@@ -28,7 +35,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte("http://localhost:8080/" + shortU))
+	var cfg Config
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	baseURL := "http://localhost:8080"
+	if cfg.BaseURL != "" {
+		baseURL = cfg.BaseURL
+	}
+
+	_, err = w.Write([]byte(baseURL + "/" + shortU))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

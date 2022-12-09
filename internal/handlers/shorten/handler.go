@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/caarlos0/env"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
 )
 
@@ -23,6 +24,10 @@ type URLData struct {
 // Response структура ответа на запрос
 type Response struct {
 	Result string `json:"result,omitempty"`
+}
+
+type Config struct {
+	BaseURL string `env:"BASE_URL"`
 }
 
 // Handler — обработчик запроса.
@@ -42,8 +47,19 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 
+	var cfg Config
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	baseURL := "http://localhost:8080"
+	if cfg.BaseURL != "" {
+		baseURL = cfg.BaseURL
+	}
+
 	res := Response{}
-	res.Result = "http://localhost:8080/" + shortU
+	res.Result = baseURL + "/" + shortU
 	result, err := json.Marshal(res)
 	if err != nil {
 		log.Fatal(err)
