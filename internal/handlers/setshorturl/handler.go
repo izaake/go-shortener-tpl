@@ -4,13 +4,19 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
-	"sync"
+
+	"github.com/caarlos0/env"
+	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 )
 
-var Str = map[string]string{}
-var lock = sync.RWMutex{}
+type Config struct {
+	BaseURL  string `env:"BASE_URL"`
+	FilePath string `env:"FILE_STORAGE_PATH"`
+}
 
 // Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -22,13 +28,23 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	shortU := GetMD5Hash(u)
 
-	lock.Lock()
-	Str[shortU] = u.String()
-	lock.Unlock()
+	var cfg Config
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repo := urls.NewRepository()
+	repo.Save(cfg.FilePath, models.URL{ShortURL: shortU, FullURL: u.String()})
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte("http://localhost:8080/" + shortU))
+	baseURL := "http://localhost:8080"
+	if cfg.BaseURL != "" {
+		baseURL = cfg.BaseURL
+	}
+
+	_, err = w.Write([]byte(baseURL + "/" + shortU))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

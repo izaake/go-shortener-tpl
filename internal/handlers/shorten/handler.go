@@ -8,12 +8,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sync"
 
-	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
+	"github.com/caarlos0/env"
+	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 )
-
-var lock = sync.RWMutex{}
 
 // URLData содержит в себе полную версию ссылки
 type URLData struct {
@@ -23,6 +22,11 @@ type URLData struct {
 // Response структура ответа на запрос
 type Response struct {
 	Result string `json:"result,omitempty"`
+}
+
+type Config struct {
+	BaseURL  string `env:"BASE_URL"`
+	FilePath string `env:"FILE_STORAGE_PATH"`
 }
 
 // Handler — обработчик запроса.
@@ -35,15 +39,25 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	shortU := GetMD5Hash(u.URL)
 
-	lock.Lock()
-	setshorturl.Str[shortU] = u.URL
-	lock.Unlock()
+	var cfg Config
+	err = env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repo := urls.NewRepository()
+	repo.Save(cfg.FilePath, models.URL{ShortURL: shortU, FullURL: u.URL})
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 
+	baseURL := "http://localhost:8080"
+	if cfg.BaseURL != "" {
+		baseURL = cfg.BaseURL
+	}
+
 	res := Response{}
-	res.Result = "http://localhost:8080/" + shortU
+	res.Result = baseURL + "/" + shortU
 	result, err := json.Marshal(res)
 	if err != nil {
 		log.Fatal(err)
