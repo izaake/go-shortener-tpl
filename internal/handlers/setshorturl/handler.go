@@ -1,16 +1,18 @@
 package setshorturl
 
 import (
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
-	"sync"
-)
+	"strings"
 
-var Str = map[string]string{}
-var lock = sync.RWMutex{}
+	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+)
 
 // Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -22,13 +24,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	shortU := GetMD5Hash(u)
 
-	lock.Lock()
-	Str[shortU] = u.String()
-	lock.Unlock()
+	repo := urls.NewRepository()
+	repo.Save(models.URL{ShortURL: shortU, FullURL: u.String()})
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte("http://localhost:8080/" + shortU))
+	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortU))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -41,11 +42,20 @@ func GetMD5Hash(u *url.URL) string {
 }
 
 func validate(r *http.Request) (*url.URL, error) {
-	su, err := io.ReadAll(r.Body)
+	reader := r.Body
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		reader = gz
+	}
+
+	su, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
+	defer reader.Close()
 
 	u, err := url.ParseRequestURI(string(su))
 	if err != nil {

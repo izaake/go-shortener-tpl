@@ -2,21 +2,17 @@ package getbyid
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
+	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 )
-
-var lock = sync.RWMutex{}
 
 // Handler — обработчик запроса поиска полной ссылки по сокращённому значению.
 func Handler(w http.ResponseWriter, r *http.Request) {
 	shu := chi.URLParam(r, "id")
 
-	lock.RLock()
-	su := setshorturl.Str[shu]
-	lock.RUnlock()
+	repo := urls.NewRepository()
+	su := repo.Find(shu)
 
 	if su == "" {
 		http.Error(w, "not found", http.StatusBadRequest)

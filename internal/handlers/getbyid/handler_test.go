@@ -22,7 +22,7 @@ func TestHandler(t *testing.T) {
 
 	statusCode, body := testRequest(t, ts, http.MethodPost, "/", strings.NewReader(url))
 	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, "http://localhost:8080/6bdb5b0e26a76e4dab7cd1a272caebc0", body)
+	assert.Equal(t, "/6bdb5b0e26a76e4dab7cd1a272caebc0", body)
 
 	// По короткой ссылке получаем полный URL
 	statusCode, _ = testRequest(t, ts, http.MethodGet, "/6bdb5b0e26a76e4dab7cd1a272caebc0", nil)
