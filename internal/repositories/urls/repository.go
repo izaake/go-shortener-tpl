@@ -11,7 +11,7 @@ import (
 // Repository Интерфейс для репозитория
 type Repository interface {
 	// Save сохраняет ссылку in memory
-	Save(url models.URL)
+	Save(url *models.URL) error
 
 	// Find ищет полную ссылку по сокращённому варианту
 	Find(url string) string
@@ -45,15 +45,20 @@ func NewRepository() Repository {
 }
 
 // Save сохраняет ссылку
-func (r urlsRepository) Save(url models.URL) {
+func (r urlsRepository) Save(url *models.URL) error {
 	filePath := r.GetFilePath()
 	if filePath != "" {
-		file.WriteToFile(filePath, &url)
+		err := file.WriteToFile(filePath, url)
+		if err != nil {
+			return err
+		}
 	}
 
 	lock.Lock()
 	URLS[url.ShortURL] = url.FullURL
 	lock.Unlock()
+
+	return nil
 }
 
 // Find ищет полную ссылку по сокращённому варианту
@@ -64,12 +69,13 @@ func (r urlsRepository) Find(url string) string {
 	return u
 }
 
-// RestoreFromFile сохраняет ссылку
+// RestoreFromFile восстанавливает данные из файла в память
 func (r urlsRepository) RestoreFromFile(filePath string) {
 	if filePath != "" {
 		urls, err := file.ReadLines(filePath)
 		if err != nil {
-			log.Fatalf("readLines: %s", err)
+			log.Print(err)
+			return
 		}
 		for _, url := range urls {
 			URLS[url.ShortURL] = url.FullURL

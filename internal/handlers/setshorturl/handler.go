@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,20 +15,25 @@ import (
 
 // Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
 func Handler(w http.ResponseWriter, r *http.Request) {
-	u, err := validate(r)
+	fullURL, err := validate(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	shortU := GetMD5Hash(u)
+	shortURL := GetMD5Hash(fullURL)
 
 	repo := urls.NewRepository()
-	repo.Save(models.URL{ShortURL: shortU, FullURL: u.String()})
+	u := models.URL{ShortURL: shortURL, FullURL: fullURL.String()}
+	err = repo.Save(&u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortU))
+	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortURL))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -46,7 +50,7 @@ func validate(r *http.Request) (*url.URL, error) {
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		reader = gz
 	}

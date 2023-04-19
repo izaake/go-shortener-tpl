@@ -20,6 +20,8 @@ type Config struct {
 	FilePath      string `env:"FILE_STORAGE_PATH"`
 }
 
+const headerContentType = "Content-Type"
+
 func main() {
 	var cfg Config
 	err := env.Parse(&cfg)
@@ -67,7 +69,9 @@ func NewRouter() chi.Router {
 
 func commonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
+		if r.Header.Get(headerContentType) == "application/json" {
+			w.Header().Add(headerContentType, "application/json")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

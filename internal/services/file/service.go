@@ -3,7 +3,6 @@ package file
 import (
 	"bufio"
 	"encoding/json"
-	"log"
 	"os"
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
@@ -69,22 +68,23 @@ func (c *Reader) Close() error {
 	return c.file.Close()
 }
 
-func WriteToFile(fileName string, url *models.URL) {
+func WriteToFile(fileName string, url *models.URL) error {
 	writer, err := NewWriter(fileName)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer writer.Close()
 
 	if err := writer.WriteEvent(url); err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 func ReadLines(fileName string) ([]models.URL, error) {
 	reader, err := NewReader(fileName)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer reader.Close()
 

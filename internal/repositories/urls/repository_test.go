@@ -13,7 +13,7 @@ func TestUrlsRepository_Find(t *testing.T) {
 	expextedURL := models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}
 
 	repo := NewRepository()
-	repo.Save(expextedURL)
+	repo.Save(&expextedURL)
 	actualURL := repo.Find(expextedURL.ShortURL)
 
 	assert.Equal(t, expextedURL.FullURL, actualURL)

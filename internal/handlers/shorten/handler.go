@@ -1,15 +1,11 @@
 package shorten
 
 import (
-	"bytes"
-	"compress/flate"
 	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,19 +32,25 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortU := GetMD5Hash(u.URL)
+	shortURL := GetMD5Hash(u.URL)
 
 	repo := urls.NewRepository()
-	repo.Save(models.URL{ShortURL: shortU, FullURL: u.URL})
+	l := models.URL{ShortURL: shortURL, FullURL: u.URL}
+	err = repo.Save(&l)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 
 	res := Response{}
-	res.Result = repo.GetBaseURL() + "/" + shortU
+	res.Result = repo.GetBaseURL() + "/" + shortURL
 	result, err := json.Marshal(res)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	_, err = w.Write(result)
@@ -68,7 +70,7 @@ func validate(r *http.Request) (*URLData, error) {
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		reader = gz
 	}
@@ -90,20 +92,4 @@ func validate(r *http.Request) (*URLData, error) {
 	}
 
 	return &u, nil
-}
-
-// Decompress распаковывает слайс байт.
-func Decompress(data []byte) ([]byte, error) {
-	// переменная r будет читать входящие данные и распаковывать их
-	r := flate.NewReader(bytes.NewReader(data))
-	defer r.Close()
-
-	var b bytes.Buffer
-	// в переменную b записываются распакованные данные
-	_, err := b.ReadFrom(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed decompress data: %v", err)
-	}
-
-	return b.Bytes(), nil
 }
