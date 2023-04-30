@@ -48,12 +48,16 @@ func Test_urlsRepository_RestoreFromFile(t *testing.T) {
 
 func Test_urlsRepository_FindUrlsByUserID(t *testing.T) {
 	userID := uuid.New().String()
-	expectedURLs := []models.URL{
+	urls := []models.URL{
 		{FullURL: "123", ShortURL: "321"},
 		{FullURL: "qwe", ShortURL: "ewq"},
 	}
+	expectedURLs := []models.URL{
+		{FullURL: "123", ShortURL: "/321"},
+		{FullURL: "qwe", ShortURL: "/ewq"},
+	}
 
-	user := models.User{ID: userID, URLs: expectedURLs}
+	user := models.User{ID: userID, URLs: urls}
 	repo := NewRepository()
 	repo.Save(&user)
 
