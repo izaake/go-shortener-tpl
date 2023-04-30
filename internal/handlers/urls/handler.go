@@ -13,14 +13,14 @@ import (
 func Handler(w http.ResponseWriter, r *http.Request) {
 	splitUserToken := strings.Split(w.Header().Get("Set-Cookie"), "=")
 	token := splitUserToken[1]
-	userId, err := tokenutil.DecodeUserIdFromToken(token)
+	userID, err := tokenutil.DecodeUserIDFromToken(token)
 	if err != nil {
 		http.Error(w, "invalid token", http.StatusNoContent)
 		return
 	}
 
 	repo := urls.NewRepository()
-	URLs := repo.FindUrlsByUserId(userId)
+	URLs := repo.FindUrlsByUserID(userID)
 
 	if len(URLs) == 0 {
 		http.Error(w, "no content", http.StatusNoContent)

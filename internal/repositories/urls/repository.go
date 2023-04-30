@@ -14,11 +14,11 @@ type Repository interface {
 	// Save сохраняет ссылку in memory
 	Save(user *models.User) error
 
-	// FindOriginalUrlByShortUrl ищет полную ссылку по сокращённому варианту
-	FindOriginalUrlByShortUrl(url string) string
+	// FindOriginalURLByShortURL ищет полную ссылку по сокращённому варианту
+	FindOriginalURLByShortURL(url string) string
 
-	// FindUrlsByUserId ищет все сохранённые ссылки по юзеру
-	FindUrlsByUserId(userId string) []models.URL
+	// FindUrlsByUserID ищет все сохранённые ссылки по юзеру
+	FindUrlsByUserID(userID string) []models.URL
 
 	// RestoreFromFile восстанавливает данные из файла в память
 	RestoreFromFile(filePath string)
@@ -58,21 +58,21 @@ func (r urlsRepository) Save(user *models.User) error {
 		}
 	}
 
-	if Users[user.Id] == nil {
-		Users[user.Id] = map[string]string{}
+	if Users[user.ID] == nil {
+		Users[user.ID] = map[string]string{}
 	}
 
 	for _, url := range user.URLs {
 		lock.Lock()
-		Users[user.Id][url.ShortURL] = url.FullURL
+		Users[user.ID][url.ShortURL] = url.FullURL
 		lock.Unlock()
 	}
 
 	return nil
 }
 
-// FindOriginalUrlByShortUrl ищет полную ссылку по сокращённому варианту
-func (r urlsRepository) FindOriginalUrlByShortUrl(url string) string {
+// FindOriginalURLByShortURL ищет полную ссылку по сокращённому варианту
+func (r urlsRepository) FindOriginalURLByShortURL(url string) string {
 	var u string
 	for _, user := range Users {
 		lock.RLock()
@@ -84,12 +84,12 @@ func (r urlsRepository) FindOriginalUrlByShortUrl(url string) string {
 	return u
 }
 
-// FindUrlsByUserId все сохранённые ссылки по юзеру
-func (r urlsRepository) FindUrlsByUserId(userId string) []models.URL {
+// FindUrlsByUserID все сохранённые ссылки по юзеру
+func (r urlsRepository) FindUrlsByUserID(userID string) []models.URL {
 	urls := make([]models.URL, 0)
 
 	lock.RLock()
-	for k, v := range Users[userId] {
+	for k, v := range Users[userID] {
 		urls = append(urls, models.URL{ShortURL: r.GetBaseURL() + "/" + k, FullURL: v})
 	}
 	lock.RUnlock()
@@ -107,10 +107,10 @@ func (r urlsRepository) RestoreFromFile(filePath string) {
 		}
 		for _, user := range users {
 			for _, url := range user.URLs {
-				if Users[user.Id] == nil {
-					Users[user.Id] = map[string]string{}
+				if Users[user.ID] == nil {
+					Users[user.ID] = map[string]string{}
 				}
-				Users[user.Id][url.ShortURL] = url.FullURL
+				Users[user.ID][url.ShortURL] = url.FullURL
 			}
 		}
 	}

@@ -16,7 +16,7 @@ func TestReadLines(t *testing.T) {
 	expextedURLs = append(expextedURLs, models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}, models.URL{FullURL: "1235", ShortURL: "12435"})
 
 	var expextedUsers []models.User
-	expextedUsers = append(expextedUsers, models.User{Id: "123", URLs: expextedURLs}, models.User{Id: "12345", URLs: expextedURLs})
+	expextedUsers = append(expextedUsers, models.User{ID: "123", URLs: expextedURLs}, models.User{ID: "12345", URLs: expextedURLs})
 
 	for _, u := range expextedUsers {
 		WriteToFile(filename, &u)

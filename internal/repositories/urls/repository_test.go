@@ -11,18 +11,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_urlsRepository_FindOriginalUrlByUserId(t *testing.T) {
+func Test_urlsRepository_FindOriginalUrlByUserID(t *testing.T) {
 	expectedURL := "awdwd"
-	shortUrl := "wedewdw"
-	userId := uuid.New().String()
+	shortURL := "wedewdw"
+	userID := uuid.New().String()
 
 	URL := make([]models.URL, 0)
-	URL = append(URL, models.URL{FullURL: expectedURL, ShortURL: shortUrl})
+	URL = append(URL, models.URL{FullURL: expectedURL, ShortURL: shortURL})
 
-	user := models.User{Id: userId, URLs: URL}
+	user := models.User{ID: userID, URLs: URL}
 	repo := NewRepository()
 	repo.Save(&user)
-	actualURL := repo.FindOriginalUrlByShortUrl(shortUrl)
+	actualURL := repo.FindOriginalURLByShortURL(shortURL)
 
 	assert.Equal(t, expectedURL, actualURL)
 }
@@ -36,28 +36,28 @@ func Test_urlsRepository_RestoreFromFile(t *testing.T) {
 
 	var expextedURLs []models.URL
 	expextedURLs = append(expextedURLs, models.URL{FullURL: orig, ShortURL: short})
-	expectedUser := models.User{Id: "111", URLs: expextedURLs}
+	expectedUser := models.User{ID: "111", URLs: expextedURLs}
 
 	repo := NewRepository()
 	file.WriteToFile("u.log", &expectedUser)
 	repo.RestoreFromFile("u.log")
-	actualURL := repo.FindOriginalUrlByShortUrl(short)
+	actualURL := repo.FindOriginalURLByShortURL(short)
 
 	assert.Equal(t, orig, actualURL)
 }
 
-func Test_urlsRepository_FindUrlsByUserId(t *testing.T) {
-	userId := uuid.New().String()
+func Test_urlsRepository_FindUrlsByUserID(t *testing.T) {
+	userID := uuid.New().String()
 	expectedURLs := []models.URL{
 		{FullURL: "123", ShortURL: "321"},
 		{FullURL: "qwe", ShortURL: "ewq"},
 	}
 
-	user := models.User{Id: userId, URLs: expectedURLs}
+	user := models.User{ID: userID, URLs: expectedURLs}
 	repo := NewRepository()
 	repo.Save(&user)
 
-	actualURLs := repo.FindUrlsByUserId(userId)
+	actualURLs := repo.FindUrlsByUserID(userID)
 
 	assert.Equal(t, true, reflect.DeepEqual(expectedURLs, actualURLs))
 }

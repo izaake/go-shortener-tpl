@@ -12,7 +12,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	shortURL := strings.Split(r.URL.Path, "/")[1]
 
 	repo := urls.NewRepository()
-	fullURL := repo.FindOriginalUrlByShortUrl(shortURL)
+	fullURL := repo.FindOriginalURLByShortURL(shortURL)
 
 	if fullURL == "" {
 		http.Error(w, "not found", http.StatusBadRequest)

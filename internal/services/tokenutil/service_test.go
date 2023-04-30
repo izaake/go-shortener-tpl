@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDecodeUserIdFromToken(t *testing.T) {
-	userId := uuid.New().String()
+func TestDecodeUserIDFromToken(t *testing.T) {
+	userID := uuid.New().String()
 
 	type args struct {
 		token string
@@ -22,8 +22,8 @@ func TestDecodeUserIdFromToken(t *testing.T) {
 	}{
 		{
 			name:       "positive",
-			args:       args{token: userId + "." + "0000000"},
-			want:       userId,
+			args:       args{token: userID + "." + "0000000"},
+			want:       userID,
 			wantErr:    false,
 			errMessage: "",
 		},
@@ -44,7 +44,7 @@ func TestDecodeUserIdFromToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := DecodeUserIdFromToken(tt.args.token)
+			got, err := DecodeUserIDFromToken(tt.args.token)
 
 			if err != nil {
 				assert.Equal(t, tt.wantErr, true)
@@ -57,9 +57,9 @@ func TestDecodeUserIdFromToken(t *testing.T) {
 }
 
 func TestIsTokenValid(t *testing.T) {
-	userId := uuid.New().String()
-	tokenValid := GenerateTokenForUser(userId)
-	tokenInvalid := userId + "12345"
+	userID := uuid.New().String()
+	tokenValid := GenerateTokenForUser(userID)
+	tokenInvalid := userID + "12345"
 
 	type args struct {
 		token string

@@ -30,12 +30,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	splitUserToken := strings.Split(cookie, "=")
 	token := splitUserToken[1]
 
-	userId, _ := tokenutil.DecodeUserIdFromToken(token)
+	userID, _ := tokenutil.DecodeUserIDFromToken(token)
 	shortURL := GetMD5Hash(fullURL)
 
 	var uls []models.URL
 	uls = append(uls, models.URL{FullURL: fullURL.String(), ShortURL: shortURL})
-	user := models.User{Id: userId, URLs: uls}
+	user := models.User{ID: userID, URLs: uls}
 
 	repo := urls.NewRepository()
 	err = repo.Save(&user)

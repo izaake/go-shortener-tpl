@@ -15,12 +15,12 @@ type Config struct {
 	Key []byte `env:"PRIVATE_KEY"`
 }
 
-func GenerateUserId() string {
+func GenerateUserID() string {
 	id := uuid.New()
 	return id.String()
 }
 
-func GenerateTokenForUser(userId string) string {
+func GenerateTokenForUser(userID string) string {
 	var key []byte
 
 	var cfg Config
@@ -30,10 +30,10 @@ func GenerateTokenForUser(userId string) string {
 	}
 
 	h := hmac.New(sha256.New, key)
-	h.Write([]byte(userId))
+	h.Write([]byte(userID))
 	sign := h.Sum(nil)
 
-	return userId + "." + hex.EncodeToString(sign)
+	return userID + "." + hex.EncodeToString(sign)
 }
 
 func IsTokenValid(token string) bool {
@@ -47,16 +47,16 @@ func IsTokenValid(token string) bool {
 		return false
 	}
 
-	userId := splitToken[0]
+	userID := splitToken[0]
 
 	h := hmac.New(sha256.New, nil)
-	h.Write([]byte(userId))
+	h.Write([]byte(userID))
 	sign := h.Sum(nil)
 
 	return hmac.Equal(sign, data)
 }
 
-func DecodeUserIdFromToken(token string) (string, error) {
+func DecodeUserIDFromToken(token string) (string, error) {
 	if token == "" {
 		return "", errors.New("empty token")
 	}

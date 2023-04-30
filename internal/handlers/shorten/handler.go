@@ -39,10 +39,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	shortURL := GetMD5Hash(u.URL)
 	repo := urls.NewRepository()
 
-	userId, _ := tokenutil.DecodeUserIdFromToken(token)
+	userID, _ := tokenutil.DecodeUserIDFromToken(token)
 	var uls []models.URL
 	uls = append(uls, models.URL{FullURL: u.URL, ShortURL: shortURL})
-	user := models.User{Id: userId, URLs: uls}
+	user := models.User{ID: userID, URLs: uls}
 
 	err = repo.Save(&user)
 	if err != nil {

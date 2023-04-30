@@ -42,7 +42,7 @@ func TestHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var uls []models.URL
 			uls = append(uls, models.URL{FullURL: "aaa", ShortURL: "bbb"})
-			user := models.User{Id: "4a0b04b3-a2cb-4885-af15-9a342e817b00", URLs: uls}
+			user := models.User{ID: "4a0b04b3-a2cb-4885-af15-9a342e817b00", URLs: uls}
 
 			repo := urls.NewRepository()
 			repo.Save(&user)

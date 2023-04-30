@@ -94,12 +94,12 @@ func authMiddleware(next http.Handler) http.Handler {
 		if t != nil {
 			splitToken := strings.Split(t.String(), "=")
 			token = splitToken[1]
-			_, err = tokenutil.DecodeUserIdFromToken(token)
+			_, err = tokenutil.DecodeUserIDFromToken(token)
 		}
 
-		if err != nil || tokenutil.IsTokenValid(token) == false {
-			userId := tokenutil.GenerateUserId()
-			token = tokenutil.GenerateTokenForUser(userId)
+		if err != nil || !tokenutil.IsTokenValid(token) {
+			userID := tokenutil.GenerateUserID()
+			token = tokenutil.GenerateTokenForUser(userID)
 		}
 
 		http.SetCookie(w, &http.Cookie{Name: "token", Value: token})
