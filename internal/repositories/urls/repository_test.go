@@ -60,7 +60,6 @@ func Test_urlsRepository_FindUrlsByUserID(t *testing.T) {
 	user := models.User{ID: userID, URLs: urls}
 	repo := NewRepository()
 	repo.Save(&user)
-
 	actualURLs := repo.FindUrlsByUserID(userID)
 
 	assert.Equal(t, true, reflect.DeepEqual(expectedURLs, actualURLs))
