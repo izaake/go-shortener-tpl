@@ -14,8 +14,8 @@ type Repository interface {
 	// Save сохраняет ссылку in memory
 	Save(user *models.User) error
 
-	// FindOriginalUrlByUserId ищет полную ссылку по сокращённому варианту по юзеру
-	FindOriginalUrlByUserId(url string, userId string) string
+	// FindOriginalUrlByShortUrl ищет полную ссылку по сокращённому варианту
+	FindOriginalUrlByShortUrl(url string) string
 
 	// FindUrlsByUserId ищет все сохранённые ссылки по юзеру
 	FindUrlsByUserId(userId string) []models.URL
@@ -71,11 +71,16 @@ func (r urlsRepository) Save(user *models.User) error {
 	return nil
 }
 
-// FindOriginalUrlByUserId ищет полную ссылку по сокращённому варианту по юзеру
-func (r urlsRepository) FindOriginalUrlByUserId(url string, userId string) string {
-	lock.RLock()
-	u := Users[userId][url]
-	lock.RUnlock()
+// FindOriginalUrlByShortUrl ищет полную ссылку по сокращённому варианту
+func (r urlsRepository) FindOriginalUrlByShortUrl(url string) string {
+	var u string
+	for _, user := range Users {
+		lock.RLock()
+		if user[url] != "" {
+			u = user[url]
+		}
+		lock.RUnlock()
+	}
 	return u
 }
 
@@ -85,7 +90,7 @@ func (r urlsRepository) FindUrlsByUserId(userId string) []models.URL {
 
 	lock.RLock()
 	for k, v := range Users[userId] {
-		urls = append(urls, models.URL{ShortURL: k, FullURL: v})
+		urls = append(urls, models.URL{ShortURL: r.GetBaseURL() + "/" + k, FullURL: v})
 	}
 	lock.RUnlock()
 

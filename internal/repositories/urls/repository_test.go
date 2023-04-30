@@ -1,11 +1,13 @@
 package urls
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/izaake/go-shortener-tpl/internal/models"
+	"github.com/izaake/go-shortener-tpl/internal/services/file"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,24 +22,29 @@ func Test_urlsRepository_FindOriginalUrlByUserId(t *testing.T) {
 	user := models.User{Id: userId, URLs: URL}
 	repo := NewRepository()
 	repo.Save(&user)
-	actualURL := repo.FindOriginalUrlByUserId(shortUrl, userId)
+	actualURL := repo.FindOriginalUrlByShortUrl(shortUrl)
 
 	assert.Equal(t, expectedURL, actualURL)
 }
 
-//func Test_urlsRepository_RestoreFromFile(t *testing.T) {
-//	filename := "u.log"
-//	defer os.Remove(filename)
-//
-//	expextedURL := models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}
-//
-//	repo := NewRepository()
-//	file.WriteToFile("u.log", &expextedURL)
-//	repo.RestoreFromFile("u.log")
-//	actualURL := repo.FindOriginalUrlByUserId(expextedURL.ShortURL)
-//
-//	assert.Equal(t, expextedURL.FullURL, actualURL)
-//}
+func Test_urlsRepository_RestoreFromFile(t *testing.T) {
+	filename := "u.log"
+	defer os.Remove(filename)
+
+	short := "wedewdw"
+	orig := "awdwd"
+
+	var expextedURLs []models.URL
+	expextedURLs = append(expextedURLs, models.URL{FullURL: orig, ShortURL: short})
+	expectedUser := models.User{Id: "111", URLs: expextedURLs}
+
+	repo := NewRepository()
+	file.WriteToFile("u.log", &expectedUser)
+	repo.RestoreFromFile("u.log")
+	actualURL := repo.FindOriginalUrlByShortUrl(short)
+
+	assert.Equal(t, orig, actualURL)
+}
 
 func Test_urlsRepository_FindUrlsByUserId(t *testing.T) {
 	userId := uuid.New().String()

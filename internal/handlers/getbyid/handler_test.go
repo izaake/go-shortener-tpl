@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testCookie = "token=4a0b04b3-a2cb-4885-af15-9a342e817b00.f22b9af276e08f49c204b7a892cb5d211162255b0808dd891094c48a8f854e8a"
-
 func TestHandler(t *testing.T) {
 	// Получаем короткую ссылку для URL
 	url := "https://practicum.yandex.ru"
@@ -61,7 +59,6 @@ func TestHandlerGetNegative(t *testing.T) {
 
 func testRequest(t *testing.T, handler http.HandlerFunc, method string, path string, body io.Reader) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
-	w.Header().Add("Set-Cookie", testCookie)
 
 	r, err := http.NewRequest(method, path, body)
 	require.NoError(t, err)

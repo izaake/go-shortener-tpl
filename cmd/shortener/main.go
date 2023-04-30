@@ -74,7 +74,7 @@ func NewRouter() chi.Router {
 
 func commonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(headerContentType) == "application/json" {
+		if r.Header.Get(headerContentType) == "application/json" || r.URL.Path == "/api/user/urls" {
 			w.Header().Add(headerContentType, "application/json")
 		}
 		next.ServeHTTP(w, r)
