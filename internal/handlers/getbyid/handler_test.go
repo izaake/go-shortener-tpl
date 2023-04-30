@@ -1,4 +1,4 @@
-package handler
+package getbyid
 
 import (
 	"io"
@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/shorten"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +22,7 @@ func TestHandler(t *testing.T) {
 
 	statusCode, body := testRequest(t, ts, http.MethodPost, "/", strings.NewReader(url))
 	assert.Equal(t, http.StatusCreated, statusCode)
-	assert.Equal(t, "http://localhost:8080/6bdb5b0e26a76e4dab7cd1a272caebc0", body)
+	assert.Equal(t, "/6bdb5b0e26a76e4dab7cd1a272caebc0", body)
 
 	// По короткой ссылке получаем полный URL
 	statusCode, _ = testRequest(t, ts, http.MethodGet, "/6bdb5b0e26a76e4dab7cd1a272caebc0", nil)
@@ -124,7 +126,8 @@ func NewRouter() chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{id}", Handler)
-		r.Post("/", Handler)
+		r.Post("/", setshorturl.Handler)
+		r.Post("/api/shorten", shorten.Handler)
 	})
 	return r
 }
