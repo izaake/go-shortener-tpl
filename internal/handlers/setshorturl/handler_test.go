@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const testCookie = "token=4a0b04b3-a2cb-4885-af15-9a342e817b00.f22b9af276e08f49c204b7a892cb5d211162255b0808dd891094c48a8f854e8a"
 
 func TestHandlerPostNegative(t *testing.T) {
 	type want struct {
@@ -44,36 +45,21 @@ func TestHandlerPostNegative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewRouter()
-			ts := httptest.NewServer(r)
-			defer ts.Close()
-
-			statusCode, body := testRequest(t, ts, tt.method, "/", strings.NewReader(tt.requestBody))
-			assert.Equal(t, tt.want.statusCode, statusCode)
-			assert.Equal(t, tt.want.response, body)
+			resp := testRequest(t, Handler, tt.method, "/", strings.NewReader(tt.requestBody))
+			assert.Equal(t, tt.want.statusCode, resp.Code)
+			assert.Equal(t, tt.want.response, resp.Body.String())
 		})
 	}
 }
 
-func testRequest(t *testing.T, ts *httptest.Server, method string, path string, body io.Reader) (int, string) {
-	req, err := http.NewRequest(method, ts.URL+path, body)
+func testRequest(t *testing.T, handler http.HandlerFunc, method string, path string, body io.Reader) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	w.Header().Add("Set-Cookie", testCookie)
+
+	r, err := http.NewRequest(method, path, body)
 	require.NoError(t, err)
 
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
+	handler.ServeHTTP(w, r)
 
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	return resp.StatusCode, string(respBody)
-}
-
-func NewRouter() chi.Router {
-	r := chi.NewRouter()
-
-	r.Route("/", func(r chi.Router) {
-		r.Post("/", Handler)
-	})
-	return r
+	return w
 }

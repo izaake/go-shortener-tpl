@@ -11,6 +11,7 @@ import (
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
 // Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
@@ -21,11 +22,23 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cookie := w.Header().Get("Set-Cookie")
+	if cookie == "" {
+		http.Error(w, "empty cookie header", http.StatusBadRequest)
+		return
+	}
+	splitUserToken := strings.Split(cookie, "=")
+	token := splitUserToken[1]
+
+	userId, _ := tokenutil.DecodeUserIdFromToken(token)
 	shortURL := GetMD5Hash(fullURL)
 
+	var uls []models.URL
+	uls = append(uls, models.URL{FullURL: fullURL.String(), ShortURL: shortURL})
+	user := models.User{Id: userId, URLs: uls}
+
 	repo := urls.NewRepository()
-	u := models.URL{ShortURL: shortURL, FullURL: fullURL.String()}
-	err = repo.Save(&u)
+	err = repo.Save(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

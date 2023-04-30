@@ -12,6 +12,7 @@ import (
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
 // URLData содержит в себе полную версию ссылки
@@ -32,11 +33,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL := GetMD5Hash(u.URL)
+	splitUserToken := strings.Split(w.Header().Get("Set-Cookie"), "=")
+	token := splitUserToken[1]
 
+	shortURL := GetMD5Hash(u.URL)
 	repo := urls.NewRepository()
-	l := models.URL{ShortURL: shortURL, FullURL: u.URL}
-	err = repo.Save(&l)
+
+	userId, _ := tokenutil.DecodeUserIdFromToken(token)
+	var uls []models.URL
+	uls = append(uls, models.URL{FullURL: u.URL, ShortURL: shortURL})
+	user := models.User{Id: userId, URLs: uls}
+
+	err = repo.Save(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

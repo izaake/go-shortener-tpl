@@ -15,11 +15,14 @@ func TestReadLines(t *testing.T) {
 	var expextedURLs []models.URL
 	expextedURLs = append(expextedURLs, models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}, models.URL{FullURL: "1235", ShortURL: "12435"})
 
-	for _, u := range expextedURLs {
+	var expextedUsers []models.User
+	expextedUsers = append(expextedUsers, models.User{Id: "123", URLs: expextedURLs}, models.User{Id: "12345", URLs: expextedURLs})
+
+	for _, u := range expextedUsers {
 		WriteToFile(filename, &u)
 	}
 
-	urls, _ := ReadLines(filename)
+	users, _ := ReadLines(filename)
 
-	assert.Equal(t, expextedURLs, urls)
+	assert.Equal(t, expextedUsers, users)
 }

@@ -9,12 +9,16 @@ import (
 )
 
 // Repository Интерфейс для репозитория
+// todo разделить работу с файлом и с ссылками
 type Repository interface {
 	// Save сохраняет ссылку in memory
-	Save(url *models.URL) error
+	Save(user *models.User) error
 
-	// Find ищет полную ссылку по сокращённому варианту
-	Find(url string) string
+	// FindOriginalUrlByUserId ищет полную ссылку по сокращённому варианту по юзеру
+	FindOriginalUrlByUserId(url string, userId string) string
+
+	// FindUrlsByUserId ищет все сохранённые ссылки по юзеру
+	FindUrlsByUserId(userId string) []models.URL
 
 	// RestoreFromFile восстанавливает данные из файла в память
 	RestoreFromFile(filePath string)
@@ -34,7 +38,7 @@ type Repository interface {
 
 type urlsRepository struct{}
 
-var URLS = map[string]string{}
+var Users = map[string]map[string]string{}
 var BaseURL string
 var FilePath string
 var lock = sync.RWMutex{}
@@ -44,41 +48,65 @@ func NewRepository() Repository {
 	return &urlsRepository{}
 }
 
-// Save сохраняет ссылку
-func (r urlsRepository) Save(url *models.URL) error {
+// Save сохраняет модель юзера со ссылками
+func (r urlsRepository) Save(user *models.User) error {
 	filePath := r.GetFilePath()
 	if filePath != "" {
-		err := file.WriteToFile(filePath, url)
+		err := file.WriteToFile(filePath, user)
 		if err != nil {
 			return err
 		}
 	}
 
-	lock.Lock()
-	URLS[url.ShortURL] = url.FullURL
-	lock.Unlock()
+	if Users[user.Id] == nil {
+		Users[user.Id] = map[string]string{}
+	}
+
+	for _, url := range user.URLs {
+		lock.Lock()
+		Users[user.Id][url.ShortURL] = url.FullURL
+		lock.Unlock()
+	}
 
 	return nil
 }
 
-// Find ищет полную ссылку по сокращённому варианту
-func (r urlsRepository) Find(url string) string {
+// FindOriginalUrlByUserId ищет полную ссылку по сокращённому варианту по юзеру
+func (r urlsRepository) FindOriginalUrlByUserId(url string, userId string) string {
 	lock.RLock()
-	u := URLS[url]
+	u := Users[userId][url]
 	lock.RUnlock()
 	return u
+}
+
+// FindUrlsByUserId все сохранённые ссылки по юзеру
+func (r urlsRepository) FindUrlsByUserId(userId string) []models.URL {
+	urls := make([]models.URL, 0)
+
+	lock.RLock()
+	for k, v := range Users[userId] {
+		urls = append(urls, models.URL{ShortURL: k, FullURL: v})
+	}
+	lock.RUnlock()
+
+	return urls
 }
 
 // RestoreFromFile восстанавливает данные из файла в память
 func (r urlsRepository) RestoreFromFile(filePath string) {
 	if filePath != "" {
-		urls, err := file.ReadLines(filePath)
+		users, err := file.ReadLines(filePath)
 		if err != nil {
 			log.Print(err)
 			return
 		}
-		for _, url := range urls {
-			URLS[url.ShortURL] = url.FullURL
+		for _, user := range users {
+			for _, url := range user.URLs {
+				if Users[user.Id] == nil {
+					Users[user.Id] = map[string]string{}
+				}
+				Users[user.Id][url.ShortURL] = url.FullURL
+			}
 		}
 	}
 }
