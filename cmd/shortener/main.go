@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
@@ -11,7 +12,9 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/handlers/getbyid"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/shorten"
-	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/urls"
+	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
 type Config struct {
@@ -44,8 +47,8 @@ func main() {
 		*filePath = cfg.FilePath
 	}
 
-	repo := urls.NewRepository()
-	// Восстанавливаем сохранённые url из файла
+	repo := urlsRepository.NewRepository()
+	// Восстанавливаем сохранённые url по сохранённым юзерам из файла
 	repo.RestoreFromFile(*filePath)
 	repo.SaveBaseURL(*baseURL)
 	repo.SaveFilePath(*filePath)
@@ -56,6 +59,7 @@ func main() {
 
 func NewRouter() chi.Router {
 	r := chi.NewRouter()
+	r.Use(authMiddleware)
 	r.Use(commonMiddleware)
 	r.Use(middleware.Compress(5))
 
@@ -63,15 +67,43 @@ func NewRouter() chi.Router {
 		r.Get("/{id}", getbyid.Handler)
 		r.Post("/", setshorturl.Handler)
 		r.Post("/api/shorten", shorten.Handler)
+		r.Get("/api/user/urls", urls.Handler)
 	})
 	return r
 }
 
 func commonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(headerContentType) == "application/json" {
+		if r.Header.Get(headerContentType) == "application/json" || r.URL.Path == "/api/user/urls" {
 			w.Header().Add(headerContentType, "application/json")
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var cfg Config
+		err := env.Parse(&cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var token string
+		t, err := r.Cookie("token") // строка в формате "token=<user_id>.<sign>"
+		if t != nil {
+			splitToken := strings.Split(t.String(), "=")
+			token = splitToken[1]
+			_, err = tokenutil.DecodeUserIDFromToken(token)
+		}
+
+		if err != nil || !tokenutil.IsTokenValid(token) {
+			userID := tokenutil.GenerateUserID()
+			token = tokenutil.GenerateTokenForUser(userID)
+		}
+
+		http.SetCookie(w, &http.Cookie{Name: "token", Value: token})
+
 		next.ServeHTTP(w, r)
 	})
 }
