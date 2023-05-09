@@ -2,33 +2,83 @@ package urls
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
+	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/services/file"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUrlsRepository_Find(t *testing.T) {
-	expextedURL := models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}
+func Test_urlsRepository_FindOriginalUrlByUserID(t *testing.T) {
+	expectedURL := "awdwd"
+	shortURL := "wedewdw"
+	userID := uuid.New().String()
 
-	repo := NewRepository()
-	repo.Save(&expextedURL)
-	actualURL := repo.Find(expextedURL.ShortURL)
+	URL := make([]models.URL, 0)
+	URL = append(URL, models.URL{FullURL: expectedURL, ShortURL: shortURL})
 
-	assert.Equal(t, expextedURL.FullURL, actualURL)
+	user := models.User{ID: userID, URLs: URL}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
+
+	repo.Save(&user)
+	actualURL := repo.FindOriginalURLByShortURL(shortURL)
+
+	assert.Equal(t, expectedURL, actualURL)
 }
 
-func TestUrlsRepository_RestoreFromFile(t *testing.T) {
+func Test_urlsRepository_RestoreFromFile(t *testing.T) {
 	filename := "u.log"
 	defer os.Remove(filename)
 
-	expextedURL := models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}
+	short := "wedewdw"
+	orig := "awdwd"
 
-	repo := NewRepository()
-	file.WriteToFile("u.log", &expextedURL)
+	var expextedURLs []models.URL
+	expextedURLs = append(expextedURLs, models.URL{FullURL: orig, ShortURL: short})
+	expectedUser := models.User{ID: "111", URLs: expextedURLs}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
+
+	file.WriteToFile("u.log", &expectedUser)
 	repo.RestoreFromFile("u.log")
-	actualURL := repo.Find(expextedURL.ShortURL)
+	actualURL := repo.FindOriginalURLByShortURL(short)
 
-	assert.Equal(t, expextedURL.FullURL, actualURL)
+	assert.Equal(t, orig, actualURL)
+}
+
+func Test_urlsRepository_FindUrlsByUserID(t *testing.T) {
+	userID := uuid.New().String()
+	urls := []models.URL{
+		{FullURL: "123", ShortURL: "321"},
+		{FullURL: "qwe", ShortURL: "ewq"},
+	}
+	expectedURLs := []models.URL{
+		{FullURL: "123", ShortURL: "/321"},
+		{FullURL: "qwe", ShortURL: "/ewq"},
+	}
+
+	user := models.User{ID: userID, URLs: urls}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
+	repo.Save(&user)
+	actualURLs := repo.FindUrlsByUserID(userID)
+
+	assert.Equal(t, true, reflect.DeepEqual(expectedURLs, actualURLs))
 }

@@ -6,15 +6,20 @@ import (
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/services/file"
+	"github.com/izaake/go-shortener-tpl/internal/storage"
 )
 
 // Repository Интерфейс для репозитория
+// todo разделить работу с файлом и с ссылками
 type Repository interface {
 	// Save сохраняет ссылку in memory
-	Save(url *models.URL) error
+	Save(user *models.User) error
 
-	// Find ищет полную ссылку по сокращённому варианту
-	Find(url string) string
+	// FindOriginalURLByShortURL ищет полную ссылку по сокращённому варианту
+	FindOriginalURLByShortURL(url string) string
+
+	// FindUrlsByUserID ищет все сохранённые ссылки по юзеру
+	FindUrlsByUserID(userID string) []models.URL
 
 	// RestoreFromFile восстанавливает данные из файла в память
 	RestoreFromFile(filePath string)
@@ -30,55 +35,90 @@ type Repository interface {
 
 	// GetFilePath получить путь до файла urls
 	GetFilePath() string
+
+	PingDB() error
 }
 
-type urlsRepository struct{}
+var (
+	Users    = map[string]map[string]string{}
+	BaseURL  string
+	FilePath string
+	lock     = sync.RWMutex{}
+)
 
-var URLS = map[string]string{}
-var BaseURL string
-var FilePath string
-var lock = sync.RWMutex{}
+type urlsRepository struct {
+	s storage.Storage
+}
 
 // NewRepository возвращает новый инстанс репозитория
-func NewRepository() Repository {
-	return &urlsRepository{}
+func NewRepository(s storage.Storage) Repository {
+	return &urlsRepository{s}
 }
 
-// Save сохраняет ссылку
-func (r urlsRepository) Save(url *models.URL) error {
+// Save сохраняет модель юзера со ссылками
+func (r urlsRepository) Save(user *models.User) error {
 	filePath := r.GetFilePath()
 	if filePath != "" {
-		err := file.WriteToFile(filePath, url)
+		err := file.WriteToFile(filePath, user)
 		if err != nil {
 			return err
 		}
 	}
 
-	lock.Lock()
-	URLS[url.ShortURL] = url.FullURL
-	lock.Unlock()
+	if Users[user.ID] == nil {
+		Users[user.ID] = map[string]string{}
+	}
+
+	for _, url := range user.URLs {
+		lock.Lock()
+		Users[user.ID][url.ShortURL] = url.FullURL
+		lock.Unlock()
+	}
 
 	return nil
 }
 
-// Find ищет полную ссылку по сокращённому варианту
-func (r urlsRepository) Find(url string) string {
-	lock.RLock()
-	u := URLS[url]
-	lock.RUnlock()
+// FindOriginalURLByShortURL ищет полную ссылку по сокращённому варианту
+func (r urlsRepository) FindOriginalURLByShortURL(url string) string {
+	var u string
+	for _, user := range Users {
+		lock.RLock()
+		if user[url] != "" {
+			u = user[url]
+		}
+		lock.RUnlock()
+	}
 	return u
+}
+
+// FindUrlsByUserID все сохранённые ссылки по юзеру
+func (r urlsRepository) FindUrlsByUserID(userID string) []models.URL {
+	urls := make([]models.URL, 0)
+
+	lock.RLock()
+	for k, v := range Users[userID] {
+		urls = append(urls, models.URL{ShortURL: r.GetBaseURL() + "/" + k, FullURL: v})
+	}
+	lock.RUnlock()
+
+	return urls
 }
 
 // RestoreFromFile восстанавливает данные из файла в память
 func (r urlsRepository) RestoreFromFile(filePath string) {
 	if filePath != "" {
-		urls, err := file.ReadLines(filePath)
+		users, err := file.ReadLines(filePath)
 		if err != nil {
 			log.Print(err)
 			return
 		}
-		for _, url := range urls {
-			URLS[url.ShortURL] = url.FullURL
+		for _, user := range users {
+			for _, url := range user.URLs {
+				if Users[user.ID] == nil {
+					Users[user.ID] = map[string]string{}
+				}
+				Users[user.ID][url.ShortURL] = url.FullURL
+			}
 		}
 	}
 }
@@ -97,4 +137,8 @@ func (r urlsRepository) SaveFilePath(filePath string) {
 
 func (r urlsRepository) GetFilePath() string {
 	return FilePath
+}
+
+func (r urlsRepository) PingDB() error {
+	return r.s.Ping()
 }

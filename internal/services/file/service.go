@@ -29,7 +29,7 @@ func NewWriter(fileName string) (*Writer, error) {
 	}, nil
 }
 
-func (p *Writer) WriteEvent(event *models.URL) error {
+func (p *Writer) WriteEvent(event *models.User) error {
 	return p.encoder.Encode(&event)
 }
 
@@ -68,37 +68,37 @@ func (c *Reader) Close() error {
 	return c.file.Close()
 }
 
-func WriteToFile(fileName string, url *models.URL) error {
+func WriteToFile(fileName string, user *models.User) error {
 	writer, err := NewWriter(fileName)
 	if err != nil {
 		return err
 	}
 	defer writer.Close()
 
-	if err := writer.WriteEvent(url); err != nil {
+	if err := writer.WriteEvent(user); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ReadLines(fileName string) ([]models.URL, error) {
+func ReadLines(fileName string) ([]models.User, error) {
 	reader, err := NewReader(fileName)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 
-	var URLs []models.URL
+	var Users []models.User
 	for reader.scanner.Scan() {
 		data := reader.scanner.Bytes()
 
-		url := models.URL{}
-		err := json.Unmarshal(data, &url)
+		user := models.User{}
+		err := json.Unmarshal(data, &user)
 		if err != nil {
 			return nil, err
 		}
 
-		URLs = append(URLs, url)
+		Users = append(Users, user)
 	}
-	return URLs, reader.scanner.Err()
+	return Users, reader.scanner.Err()
 }
