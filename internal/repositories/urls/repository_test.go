@@ -5,7 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
+	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/services/file"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +22,13 @@ func Test_urlsRepository_FindOriginalUrlByUserID(t *testing.T) {
 	URL = append(URL, models.URL{FullURL: expectedURL, ShortURL: shortURL})
 
 	user := models.User{ID: userID, URLs: URL}
-	repo := NewRepository()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
+
 	repo.Save(&user)
 	actualURL := repo.FindOriginalURLByShortURL(shortURL)
 
@@ -38,7 +46,12 @@ func Test_urlsRepository_RestoreFromFile(t *testing.T) {
 	expextedURLs = append(expextedURLs, models.URL{FullURL: orig, ShortURL: short})
 	expectedUser := models.User{ID: "111", URLs: expextedURLs}
 
-	repo := NewRepository()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
+
 	file.WriteToFile("u.log", &expectedUser)
 	repo.RestoreFromFile("u.log")
 	actualURL := repo.FindOriginalURLByShortURL(short)
@@ -58,7 +71,12 @@ func Test_urlsRepository_FindUrlsByUserID(t *testing.T) {
 	}
 
 	user := models.User{ID: userID, URLs: urls}
-	repo := NewRepository()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := NewRepository(s)
 	repo.Save(&user)
 	actualURLs := repo.FindUrlsByUserID(userID)
 

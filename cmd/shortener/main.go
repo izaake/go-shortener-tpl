@@ -9,33 +9,41 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/izaake/go-shortener-tpl/internal/database"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/getbyid"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/ping"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/shorten"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/urls"
 	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
+	"github.com/izaake/go-shortener-tpl/internal/storage"
+)
+
+var (
+	sAddr        = flag.String("a", ":8080", "SERVER_ADDRESS")
+	baseURL      = flag.String("b", "http://localhost:8080", "BASE_URL")
+	filePath     = flag.String("f", "", "FILE_STORAGE_PATH")
+	dbConnection = flag.String("d", "postgres://eaizaak@localhost:5432/test", "DATABASE_DSN")
 )
 
 type Config struct {
 	ServerAddress string `env:"SERVER_ADDRESS"`
 	BaseURL       string `env:"BASE_URL"`
 	FilePath      string `env:"FILE_STORAGE_PATH"`
+	DBConnection  string `env:"DATABASE_DSN"`
 }
 
 const headerContentType = "Content-Type"
 
 func main() {
+	flag.Parse()
+
 	var cfg Config
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	sAddr := flag.String("a", ":8080", "SERVER_ADDRESS")
-	baseURL := flag.String("b", "http://localhost:8080", "BASE_URL")
-	filePath := flag.String("f", "", "FILE_STORAGE_PATH")
-	flag.Parse()
 
 	if cfg.ServerAddress != "" {
 		*sAddr = cfg.ServerAddress
@@ -46,28 +54,42 @@ func main() {
 	if cfg.FilePath != "" {
 		*filePath = cfg.FilePath
 	}
+	if cfg.DBConnection != "" {
+		*dbConnection = cfg.DBConnection
+	}
 
-	repo := urlsRepository.NewRepository()
+	// DB
+	db, err := database.NewDB(dbConnection)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Repository
+	st := &storage.SQLStorage{DB: db}
+	repo := urlsRepository.NewRepository(st)
+
 	// Восстанавливаем сохранённые url по сохранённым юзерам из файла
 	repo.RestoreFromFile(*filePath)
 	repo.SaveBaseURL(*baseURL)
 	repo.SaveFilePath(*filePath)
 
-	r := NewRouter()
+	r := NewRouter(repo)
 	log.Fatal(http.ListenAndServe(*sAddr, r))
 }
 
-func NewRouter() chi.Router {
+func NewRouter(repo urlsRepository.Repository) chi.Router {
 	r := chi.NewRouter()
 	r.Use(authMiddleware)
 	r.Use(commonMiddleware)
 	r.Use(middleware.Compress(5))
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{id}", getbyid.Handler)
-		r.Post("/", setshorturl.Handler)
-		r.Post("/api/shorten", shorten.Handler)
-		r.Get("/api/user/urls", urls.Handler)
+		r.Get("/{id}", getbyid.New(repo).Handle)
+		r.Post("/", setshorturl.New(repo).Handle)
+		r.Post("/api/shorten", shorten.New(repo).Handle)
+		r.Get("/api/user/urls", urls.New(repo).Handle)
+		r.Get("/ping", ping.New(repo).Handle)
 	})
 	return r
 }

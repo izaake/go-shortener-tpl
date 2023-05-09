@@ -6,6 +6,7 @@ import (
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/services/file"
+	"github.com/izaake/go-shortener-tpl/internal/storage"
 )
 
 // Repository Интерфейс для репозитория
@@ -34,18 +35,24 @@ type Repository interface {
 
 	// GetFilePath получить путь до файла urls
 	GetFilePath() string
+
+	PingDB() error
 }
 
-type urlsRepository struct{}
+var (
+	Users    = map[string]map[string]string{}
+	BaseURL  string
+	FilePath string
+	lock     = sync.RWMutex{}
+)
 
-var Users = map[string]map[string]string{}
-var BaseURL string
-var FilePath string
-var lock = sync.RWMutex{}
+type urlsRepository struct {
+	s storage.Storage
+}
 
 // NewRepository возвращает новый инстанс репозитория
-func NewRepository() Repository {
-	return &urlsRepository{}
+func NewRepository(s storage.Storage) Repository {
+	return &urlsRepository{s}
 }
 
 // Save сохраняет модель юзера со ссылками
@@ -130,4 +137,8 @@ func (r urlsRepository) SaveFilePath(filePath string) {
 
 func (r urlsRepository) GetFilePath() string {
 	return FilePath
+}
+
+func (r urlsRepository) PingDB() error {
+	return r.s.Ping()
 }

@@ -9,8 +9,20 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
-// Handler — обработчик запроса на получение всех сохранённых ссылок юзера
-func Handler(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	repo urls.Repository
+}
+
+func New(
+	repo urls.Repository,
+) *Handler {
+	return &Handler{
+		repo: repo,
+	}
+}
+
+// Handle — обработчик запроса на получение всех сохранённых ссылок юзера
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	splitUserToken := strings.Split(w.Header().Get("Set-Cookie"), "=")
 	token := splitUserToken[1]
 	userID, err := tokenutil.DecodeUserIDFromToken(token)
@@ -19,8 +31,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repo := urls.NewRepository()
-	URLs := repo.FindUrlsByUserID(userID)
+	URLs := h.repo.FindUrlsByUserID(userID)
 
 	if len(URLs) == 0 {
 		http.Error(w, "no content", http.StatusNoContent)

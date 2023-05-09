@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
+	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,21 +48,27 @@ func TestHandlerPostNegative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := testRequest(t, Handler, tt.method, "/", strings.NewReader(tt.requestBody))
-			assert.Equal(t, tt.want.statusCode, resp.Code)
-			assert.Equal(t, tt.want.response, resp.Body.String())
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			s := mock_storage.NewMockStorage(ctrl)
+			repo := urlsRepository.NewRepository(s)
+
+			r, w := testRequest(t, tt.method, "/", strings.NewReader(tt.requestBody))
+			New(repo).Handle(w, r)
+
+			assert.Equal(t, tt.want.statusCode, w.Code)
+			assert.Equal(t, tt.want.response, w.Body.String())
 		})
 	}
 }
 
-func testRequest(t *testing.T, handler http.HandlerFunc, method string, path string, body io.Reader) *httptest.ResponseRecorder {
+func testRequest(t *testing.T, method string, path string, body io.Reader) (*http.Request, *httptest.ResponseRecorder) {
 	w := httptest.NewRecorder()
 	w.Header().Add("Set-Cookie", testCookie)
 
 	r, err := http.NewRequest(method, path, body)
 	require.NoError(t, err)
 
-	handler.ServeHTTP(w, r)
-
-	return w
+	return r, w
 }

@@ -15,6 +15,18 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
+type Handler struct {
+	repo urls.Repository
+}
+
+func New(
+	repo urls.Repository,
+) *Handler {
+	return &Handler{
+		repo: repo,
+	}
+}
+
 // URLData содержит в себе полную версию ссылки
 type URLData struct {
 	URL string `json:"url,omitempty"`
@@ -25,8 +37,8 @@ type Response struct {
 	Result string `json:"result,omitempty"`
 }
 
-// Handler — обработчик запроса.
-func Handler(w http.ResponseWriter, r *http.Request) {
+// Handle — обработчик запроса.
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	u, err := validate(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -37,14 +49,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	token := splitUserToken[1]
 
 	shortURL := GetMD5Hash(u.URL)
-	repo := urls.NewRepository()
 
 	userID, _ := tokenutil.DecodeUserIDFromToken(token)
 	var uls []models.URL
 	uls = append(uls, models.URL{FullURL: u.URL, ShortURL: shortURL})
 	user := models.User{ID: userID, URLs: uls}
 
-	err = repo.Save(&user)
+	err = h.repo.Save(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -54,7 +65,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	res := Response{}
-	res.Result = repo.GetBaseURL() + "/" + shortURL
+	res.Result = h.repo.GetBaseURL() + "/" + shortURL
 	result, err := json.Marshal(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

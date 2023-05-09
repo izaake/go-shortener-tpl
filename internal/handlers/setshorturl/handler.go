@@ -14,8 +14,20 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
 )
 
-// Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
-func Handler(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	repo urls.Repository
+}
+
+func New(
+	repo urls.Repository,
+) *Handler {
+	return &Handler{
+		repo: repo,
+	}
+}
+
+// Handle — обработчик запроса обмена полной ссылки на сокращённое значение.
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := validate(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -37,8 +49,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	uls = append(uls, models.URL{FullURL: fullURL.String(), ShortURL: shortURL})
 	user := models.User{ID: userID, URLs: uls}
 
-	repo := urls.NewRepository()
-	err = repo.Save(&user)
+	err = h.repo.Save(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -46,7 +57,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortURL))
+	_, err = w.Write([]byte(h.repo.GetBaseURL() + "/" + shortURL))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

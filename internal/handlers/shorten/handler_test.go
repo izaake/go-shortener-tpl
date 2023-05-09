@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
+	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,19 +18,26 @@ import (
 const testCookie = "token=4a0b04b3-a2cb-4885-af15-9a342e817b00.f22b9af276e08f49c204b7a892cb5d211162255b0808dd891094c48a8f854e8a"
 
 func TestHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	s := mock_storage.NewMockStorage(ctrl)
+	repo := urlsRepository.NewRepository(s)
+
 	u := URLData{
 		URL: "https://practicum.yandex.ru",
 	}
 	rawBody, err := json.Marshal(u)
 	require.NoError(t, err)
 
-	resp := testRequest(t, Handler, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
+	r, w := testRequest(t, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
+	New(repo).Handle(w, r)
 
 	res := Response{}
-	err = json.Unmarshal(resp.Body.Bytes(), &res)
+	err = json.Unmarshal(w.Body.Bytes(), &res)
 	require.NoError(t, err)
 
-	assert.Equal(t, http.StatusCreated, resp.Code)
+	assert.Equal(t, http.StatusCreated, w.Code)
 	assert.Equal(t, "/6bdb5b0e26a76e4dab7cd1a272caebc0", res.Result)
 }
 
@@ -62,24 +72,30 @@ func TestHandlerNegative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			s := mock_storage.NewMockStorage(ctrl)
+			repo := urlsRepository.NewRepository(s)
+
 			rawBody, err := json.Marshal(tt.requestBody)
 			require.NoError(t, err)
 
-			resp := testRequest(t, Handler, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
-			assert.Equal(t, tt.want.statusCode, resp.Code)
-			assert.Equal(t, tt.want.response, resp.Body.String())
+			r, w := testRequest(t, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
+			New(repo).Handle(w, r)
+
+			assert.Equal(t, tt.want.statusCode, w.Code)
+			assert.Equal(t, tt.want.response, w.Body.String())
 		})
 	}
 }
 
-func testRequest(t *testing.T, handler http.HandlerFunc, method string, path string, body io.Reader) *httptest.ResponseRecorder {
+func testRequest(t *testing.T, method string, path string, body io.Reader) (*http.Request, *httptest.ResponseRecorder) {
 	w := httptest.NewRecorder()
 	w.Header().Add("Set-Cookie", testCookie)
 
 	r, err := http.NewRequest(method, path, body)
 	require.NoError(t, err)
 
-	handler.ServeHTTP(w, r)
-
-	return w
+	return r, w
 }
