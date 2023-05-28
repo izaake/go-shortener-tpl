@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
-	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
 	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,14 +20,14 @@ func TestHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	s := mock_storage.NewMockStorage(ctrl)
-	repo := urlsRepository.NewRepository(s)
+	//s := mock_storage.NewMockStorage(ctrl)
+	repo := urlsRepository.NewMemoryRepository("")
 
 	// Получаем короткую ссылку для URL
 	url := "https://practicum.yandex.ru"
 
 	r, w := testRequest(t, http.MethodPost, "/", strings.NewReader(url))
-	setshorturl.New(repo).Handle(w, r)
+	setshorturl.New(repo, "").Handle(w, r)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 	assert.Equal(t, "/6bdb5b0e26a76e4dab7cd1a272caebc0", w.Body.String())
@@ -67,8 +66,7 @@ func TestHandlerGetNegative(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			s := mock_storage.NewMockStorage(ctrl)
-			repo := urlsRepository.NewRepository(s)
+			repo := urlsRepository.NewMemoryRepository("")
 
 			r, w := testRequest(t, tt.method, tt.request, nil)
 			New(repo).Handle(w, r)

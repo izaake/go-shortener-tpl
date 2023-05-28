@@ -58,27 +58,30 @@ func main() {
 		*dbConnection = cfg.DBConnection
 	}
 
-	// DB
-	db, err := database.NewDB(dbConnection)
-	if err != nil {
-		log.Fatal(err)
+	repo := urlsRepository.NewMemoryRepository(*baseURL)
+	if filePath != nil && *filePath != "" {
+		repo = urlsRepository.NewFileRepository(*filePath)
 	}
-	defer db.Close()
+	if dbConnection != nil && *dbConnection != "" {
+		db, err := database.NewDB(dbConnection)
+		if err == nil {
+			defer db.Close()
 
-	// Repository
-	st := &storage.SQLStorage{DB: db}
-	repo := urlsRepository.NewRepository(st)
+			st := &storage.SQLStorage{DB: db}
+			repo = urlsRepository.NewSQLRepository(st)
+		}
+	}
 
-	// Восстанавливаем сохранённые url по сохранённым юзерам из файла
-	repo.RestoreFromFile(*filePath)
-	repo.SaveBaseURL(*baseURL)
-	repo.SaveFilePath(*filePath)
+	//// Восстанавливаем сохранённые url по сохранённым юзерам из файла
+	//repo.RestoreFromFile(*filePath)
+	//repo.SaveBaseURL(*baseURL)
+	//repo.SaveFilePath(*filePath)
 
-	r := NewRouter(repo)
+	r := NewRouter(repo, *baseURL)
 	log.Fatal(http.ListenAndServe(*sAddr, r))
 }
 
-func NewRouter(repo urlsRepository.Repository) chi.Router {
+func NewRouter(repo urlsRepository.Repository, baseURL string) chi.Router {
 	r := chi.NewRouter()
 	r.Use(authMiddleware)
 	r.Use(commonMiddleware)
@@ -86,8 +89,8 @@ func NewRouter(repo urlsRepository.Repository) chi.Router {
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{id}", getbyid.New(repo).Handle)
-		r.Post("/", setshorturl.New(repo).Handle)
-		r.Post("/api/shorten", shorten.New(repo).Handle)
+		r.Post("/", setshorturl.New(repo, baseURL).Handle)
+		r.Post("/api/shorten", shorten.New(repo, baseURL).Handle)
 		r.Get("/api/user/urls", urls.New(repo).Handle)
 		r.Get("/ping", ping.New(repo).Handle)
 	})

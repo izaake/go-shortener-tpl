@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
 	urlsRepository "github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,8 +20,7 @@ func TestHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	s := mock_storage.NewMockStorage(ctrl)
-	repo := urlsRepository.NewRepository(s)
+	repo := urlsRepository.NewMemoryRepository("")
 
 	u := URLData{
 		URL: "https://practicum.yandex.ru",
@@ -31,7 +29,7 @@ func TestHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	r, w := testRequest(t, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
-	New(repo).Handle(w, r)
+	New(repo, "").Handle(w, r)
 
 	res := Response{}
 	err = json.Unmarshal(w.Body.Bytes(), &res)
@@ -75,14 +73,13 @@ func TestHandlerNegative(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			s := mock_storage.NewMockStorage(ctrl)
-			repo := urlsRepository.NewRepository(s)
+			repo := urlsRepository.NewMemoryRepository("")
 
 			rawBody, err := json.Marshal(tt.requestBody)
 			require.NoError(t, err)
 
 			r, w := testRequest(t, http.MethodPost, "/api/shorten", strings.NewReader(string(rawBody)))
-			New(repo).Handle(w, r)
+			New(repo, "").Handle(w, r)
 
 			assert.Equal(t, tt.want.statusCode, w.Code)
 			assert.Equal(t, tt.want.response, w.Body.String())

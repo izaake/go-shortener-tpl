@@ -15,14 +15,17 @@ import (
 )
 
 type Handler struct {
-	repo urls.Repository
+	repo    urls.Repository
+	baseURL string
 }
 
 func New(
 	repo urls.Repository,
+	baseURL string,
 ) *Handler {
 	return &Handler{
-		repo: repo,
+		repo:    repo,
+		baseURL: baseURL,
 	}
 }
 
@@ -57,7 +60,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte(h.repo.GetBaseURL() + "/" + shortURL))
+	_, err = w.Write([]byte(h.baseURL + "/" + shortURL))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

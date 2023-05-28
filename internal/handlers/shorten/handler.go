@@ -16,14 +16,17 @@ import (
 )
 
 type Handler struct {
-	repo urls.Repository
+	repo    urls.Repository
+	baseURL string
 }
 
 func New(
 	repo urls.Repository,
+	baseURL string,
 ) *Handler {
 	return &Handler{
-		repo: repo,
+		repo:    repo,
+		baseURL: baseURL,
 	}
 }
 
@@ -65,7 +68,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	res := Response{}
-	res.Result = h.repo.GetBaseURL() + "/" + shortURL
+	res.Result = h.baseURL + "/" + shortURL
 	result, err := json.Marshal(res)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

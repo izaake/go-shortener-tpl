@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/izaake/go-shortener-tpl/internal/mock_storage"
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/stretchr/testify/assert"
@@ -45,14 +44,12 @@ func TestHandler(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			s := mock_storage.NewMockStorage(ctrl)
-			repo := urls.NewRepository(s)
+			repo := urls.NewMemoryRepository("")
 
 			var uls []models.URL
 			uls = append(uls, models.URL{FullURL: "aaa", ShortURL: "bbb"})
 			user := models.User{ID: "4a0b04b3-a2cb-4885-af15-9a342e817b00", URLs: uls}
 
-			//repo := urls.NewRepository()
 			repo.Save(&user)
 
 			r, w := testRequest(t, "/api/user/urls", tt.token)
