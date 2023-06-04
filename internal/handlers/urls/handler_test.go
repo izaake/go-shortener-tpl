@@ -47,7 +47,7 @@ func TestHandler(t *testing.T) {
 			repo := urls.NewMemoryRepository("")
 
 			var uls []models.URL
-			uls = append(uls, models.URL{FullURL: "aaa", ShortURL: "bbb"})
+			uls = append(uls, models.URL{OriginalURL: "aaa", ShortURL: "bbb"})
 			user := models.User{ID: "4a0b04b3-a2cb-4885-af15-9a342e817b00", URLs: uls}
 
 			repo.Save(&user)

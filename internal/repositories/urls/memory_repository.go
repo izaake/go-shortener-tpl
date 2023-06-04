@@ -27,7 +27,7 @@ func (r memoryRepository) Save(user *models.User) error {
 
 	for _, url := range user.URLs {
 		lock.Lock()
-		r.Users[user.ID][url.ShortURL] = url.FullURL
+		r.Users[user.ID][url.ShortURL] = url.OriginalURL
 		lock.Unlock()
 	}
 	return nil
@@ -50,7 +50,7 @@ func (r memoryRepository) FindUrlsByUserID(userID string) []models.URL {
 
 	lock.RLock()
 	for k, v := range r.Users[userID] {
-		urls = append(urls, models.URL{ShortURL: r.BaseURL + "/" + k, FullURL: v})
+		urls = append(urls, models.URL{ShortURL: r.BaseURL + "/" + k, OriginalURL: v})
 	}
 	lock.RUnlock()
 

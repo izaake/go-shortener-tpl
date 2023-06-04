@@ -37,7 +37,7 @@ func (r fileRepository) FindOriginalURLByShortURL(url string) string {
 	for _, user := range users {
 		for _, u := range user.URLs {
 			if u.ShortURL == url {
-				return u.FullURL
+				return u.OriginalURL
 			}
 		}
 	}
@@ -56,7 +56,7 @@ func (r fileRepository) FindUrlsByUserID(userID string) []models.URL {
 	for _, user := range users {
 		if user.ID == userID {
 			for _, url := range user.URLs {
-				urls = append(urls, models.URL{ShortURL: "/" + url.ShortURL, FullURL: url.FullURL})
+				urls = append(urls, models.URL{ShortURL: "/" + url.ShortURL, OriginalURL: url.OriginalURL})
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/izaake/go-shortener-tpl/internal/database"
+	"github.com/izaake/go-shortener-tpl/internal/handlers/batch"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/getbyid"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/ping"
 	"github.com/izaake/go-shortener-tpl/internal/handlers/setshorturl"
@@ -72,11 +73,6 @@ func main() {
 		}
 	}
 
-	//// Восстанавливаем сохранённые url по сохранённым юзерам из файла
-	//repo.RestoreFromFile(*filePath)
-	//repo.SaveBaseURL(*baseURL)
-	//repo.SaveFilePath(*filePath)
-
 	r := NewRouter(repo, *baseURL)
 	log.Fatal(http.ListenAndServe(*sAddr, r))
 }
@@ -91,6 +87,7 @@ func NewRouter(repo urlsRepository.Repository, baseURL string) chi.Router {
 		r.Get("/{id}", getbyid.New(repo).Handle)
 		r.Post("/", setshorturl.New(repo, baseURL).Handle)
 		r.Post("/api/shorten", shorten.New(repo, baseURL).Handle)
+		r.Post("/api/shorten/batch", batch.New(repo, baseURL).Handle)
 		r.Get("/api/user/urls", urls.New(repo).Handle)
 		r.Get("/ping", ping.New(repo).Handle)
 	})

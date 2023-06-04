@@ -13,7 +13,7 @@ func TestReadLines(t *testing.T) {
 	defer os.Remove(filename)
 
 	var expextedURLs []models.URL
-	expextedURLs = append(expextedURLs, models.URL{FullURL: "awdwd", ShortURL: "wedewdw"}, models.URL{FullURL: "1235", ShortURL: "12435"})
+	expextedURLs = append(expextedURLs, models.URL{OriginalURL: "awdwd", ShortURL: "wedewdw"}, models.URL{OriginalURL: "1235", ShortURL: "12435"})
 
 	var expextedUsers []models.User
 	expextedUsers = append(expextedUsers, models.User{ID: "123", URLs: expextedURLs}, models.User{ID: "12345", URLs: expextedURLs})

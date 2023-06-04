@@ -32,7 +32,8 @@ create table if not exists public.urls(
 
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(5)
-	db.SetConnMaxIdleTime(time.Minute * 10)
+	db.SetConnMaxIdleTime(time.Minute * 2)
+	db.SetConnMaxLifetime(time.Minute * 2)
 
 	return db, nil
 }

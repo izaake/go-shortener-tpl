@@ -49,7 +49,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	shortURL := GetMD5Hash(fullURL)
 
 	var uls []models.URL
-	uls = append(uls, models.URL{FullURL: fullURL.String(), ShortURL: shortURL})
+	uls = append(uls, models.URL{OriginalURL: fullURL.String(), ShortURL: shortURL})
 	user := models.User{ID: userID, URLs: uls}
 
 	err = h.repo.Save(&user)

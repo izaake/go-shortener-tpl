@@ -9,25 +9,24 @@ import (
 )
 
 type Storage interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	Exec(ctx context.Context, stmt *sql.Stmt, args ...interface{}) error
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
 	Ping() error
+	BeginTx() (*sql.Tx, error)
 }
 
 type SQLStorage struct {
 	DB *sql.DB
 }
 
-func (s *SQLStorage) Exec(query string, args ...interface{}) (sql.Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	rows, err := s.DB.ExecContext(ctx, query, args...)
+func (s *SQLStorage) Exec(ctx context.Context, stmt *sql.Stmt, args ...interface{}) error {
+	_, err := stmt.ExecContext(ctx, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return rows, nil
+
+	return nil
 }
 
 func (s *SQLStorage) Query(query string, args ...interface{}) (*sql.Rows, error) {
@@ -50,4 +49,8 @@ func (s *SQLStorage) QueryRow(query string, args ...interface{}) *sql.Row {
 
 func (s *SQLStorage) Ping() error {
 	return s.DB.Ping()
+}
+
+func (s *SQLStorage) BeginTx() (*sql.Tx, error) {
+	return s.DB.Begin()
 }

@@ -1,6 +1,9 @@
 package urls
 
 import (
+	"context"
+	"time"
+
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/storage"
 )
@@ -14,15 +17,30 @@ func NewSQLRepository(s storage.Storage) Repository {
 }
 
 func (r sqlRepository) Save(user *models.User) error {
-	//добавить транзакцию
-	for _, u := range user.URLs {
-		q := "INSERT INTO urls(user_id, short_url, original_url) values ($1, $2, $3) ON CONFLICT DO NOTHING"
-		_, err := r.s.Exec(q, user.ID, u.ShortURL, u.FullURL)
-		if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	q := "INSERT INTO urls(user_id, short_url, original_url) values ($1, $2, $3) ON CONFLICT DO NOTHING"
+
+	tx, err := r.s.BeginTx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, q)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range user.URLs {
+		if err = r.s.Exec(ctx, stmt, user.ID, v.ShortURL, v.OriginalURL); err != nil {
 			return err
 		}
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 func (r sqlRepository) FindOriginalURLByShortURL(url string) string {
@@ -49,7 +67,7 @@ func (r sqlRepository) FindUrlsByUserID(userID string) []models.URL {
 	// пробегаем по всем записям
 	for rows.Next() {
 		var u models.URL
-		err = rows.Scan(&u.ShortURL, &u.FullURL)
+		err = rows.Scan(&u.ShortURL, &u.OriginalURL)
 		if err != nil {
 			return nil
 		}
