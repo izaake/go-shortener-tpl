@@ -1,7 +1,6 @@
-package shorten
+package batch
 
 import (
-	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -13,8 +12,6 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Handler struct {
@@ -32,17 +29,16 @@ func New(
 	}
 }
 
-// URLData содержит в себе полную версию ссылки
-type URLData struct {
-	URL string `json:"url,omitempty"`
+type BatchIn struct {
+	Batch []NamedURL
 }
 
-// Response структура ответа на запрос
-type Response struct {
-	Result string `json:"result,omitempty"`
+type NamedURL struct {
+	ID          string `json:"correlation_id"`         // Строковый идентификатор
+	OriginalURL string `json:"original_url,omitempty"` // URL для сокращения
+	ShortURL    string `json:"short_url,omitempty"`    // Результирующий сокращённый URL
 }
 
-// Handle — обработчик запроса.
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	u, err := validate(r)
 	if err != nil {
@@ -53,34 +49,28 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	splitUserToken := strings.Split(w.Header().Get("Set-Cookie"), "=")
 	token := splitUserToken[1]
 
-	shortURL := GetMD5Hash(u.URL)
+	var uls []models.URL
+	out := make([]NamedURL, 0)
+	for _, v := range u {
+		su := GetMD5Hash(v.OriginalURL)
+		uls = append(uls, models.URL{OriginalURL: v.OriginalURL, ShortURL: su})
+
+		out = append(out, NamedURL{ID: v.ID, ShortURL: h.baseURL + "/" + su})
+	}
 
 	userID, _ := tokenutil.DecodeUserIDFromToken(token)
-	var uls []models.URL
-	uls = append(uls, models.URL{OriginalURL: u.URL, ShortURL: shortURL})
 	user := models.User{ID: userID, URLs: uls}
 
-	err = h.repo.Save(&user, false)
+	err = h.repo.Save(&user, true)
 	if err != nil {
-		if e, ok := err.(*pgconn.PgError); ok {
-			if e.Code == pgerrcode.UniqueViolation {
-				w.WriteHeader(http.StatusConflict)
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Add("Content-Type", "application/json")
 
-	res := Response{}
-	res.Result = h.baseURL + "/" + shortURL
-	result, err := json.Marshal(res)
+	result, err := json.Marshal(out)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -98,31 +88,25 @@ func GetMD5Hash(u string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func validate(r *http.Request) (*URLData, error) {
+func validate(r *http.Request) ([]NamedURL, error) {
 	reader := r.Body
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		gz, err := gzip.NewReader(r.Body)
-		if err != nil {
-			return nil, err
-		}
-		reader = gz
-	}
-
 	rawValue, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 
-	u := URLData{}
+	u := make([]NamedURL, 0)
 	if err := json.Unmarshal(rawValue, &u); err != nil {
 		return nil, err
 	}
 
-	_, err = url.ParseRequestURI(u.URL)
-	if err != nil {
-		return nil, err
+	for _, v := range u {
+		_, err = url.ParseRequestURI(v.OriginalURL)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return &u, nil
+	return u, nil
 }

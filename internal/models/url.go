@@ -1,6 +1,6 @@
 package models
 
 type URL struct {
-	ShortURL string `json:"short_url"`
-	FullURL  string `json:"full_url"`
+	ShortURL    string `json:"short_url"`    // Результирующий сокращённый URL
+	OriginalURL string `json:"original_url"` // URL для сокращения
 }

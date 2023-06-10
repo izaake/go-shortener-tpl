@@ -11,29 +11,67 @@ import (
 
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
+	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Handler — обработчик запроса обмена полной ссылки на сокращённое значение.
-func Handler(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	repo    urls.Repository
+	baseURL string
+}
+
+func New(
+	repo urls.Repository,
+	baseURL string,
+) *Handler {
+	return &Handler{
+		repo:    repo,
+		baseURL: baseURL,
+	}
+}
+
+// Handle — обработчик запроса обмена полной ссылки на сокращённое значение.
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := validate(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	cookie := w.Header().Get("Set-Cookie")
+	if cookie == "" {
+		http.Error(w, "empty cookie header", http.StatusBadRequest)
+		return
+	}
+	splitUserToken := strings.Split(cookie, "=")
+	token := splitUserToken[1]
+
+	userID, _ := tokenutil.DecodeUserIDFromToken(token)
 	shortURL := GetMD5Hash(fullURL)
 
-	repo := urls.NewRepository()
-	u := models.URL{ShortURL: shortURL, FullURL: fullURL.String()}
-	err = repo.Save(&u)
+	var uls []models.URL
+	uls = append(uls, models.URL{OriginalURL: fullURL.String(), ShortURL: shortURL})
+	user := models.User{ID: userID, URLs: uls}
+
+	err = h.repo.Save(&user, false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		if e, ok := err.(*pgconn.PgError); ok {
+			if e.Code == pgerrcode.UniqueViolation {
+				w.WriteHeader(http.StatusConflict)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
 
-	_, err = w.Write([]byte(repo.GetBaseURL() + "/" + shortURL))
+	_, err = w.Write([]byte(h.baseURL + "/" + shortURL))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
