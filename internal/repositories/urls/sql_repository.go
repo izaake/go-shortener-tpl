@@ -16,11 +16,14 @@ func NewSQLRepository(s storage.Storage) Repository {
 	return &sqlRepository{s: s}
 }
 
-func (r sqlRepository) Save(user *models.User) error {
+func (r sqlRepository) Save(user *models.User, ignoreConflicts bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	q := "INSERT INTO urls(user_id, short_url, original_url) values ($1, $2, $3) ON CONFLICT DO NOTHING"
+	q := `INSERT INTO urls(user_id, short_url, original_url) values ($1, $2, $3)`
+	if ignoreConflicts {
+		q = q + ` ON CONFLICT DO NOTHING`
+	}
 
 	tx, err := r.s.BeginTx()
 	if err != nil {

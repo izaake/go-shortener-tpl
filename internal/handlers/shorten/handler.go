@@ -13,6 +13,8 @@ import (
 	"github.com/izaake/go-shortener-tpl/internal/models"
 	"github.com/izaake/go-shortener-tpl/internal/repositories/urls"
 	"github.com/izaake/go-shortener-tpl/internal/services/tokenutil"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Handler struct {
@@ -58,10 +60,19 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	uls = append(uls, models.URL{OriginalURL: u.URL, ShortURL: shortURL})
 	user := models.User{ID: userID, URLs: uls}
 
-	err = h.repo.Save(&user)
+	err = h.repo.Save(&user, false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		if e, ok := err.(*pgconn.PgError); ok {
+			if e.Code == pgerrcode.UniqueViolation {
+				w.WriteHeader(http.StatusConflict)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)

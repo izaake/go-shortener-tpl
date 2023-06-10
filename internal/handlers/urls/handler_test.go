@@ -50,7 +50,7 @@ func TestHandler(t *testing.T) {
 			uls = append(uls, models.URL{OriginalURL: "aaa", ShortURL: "bbb"})
 			user := models.User{ID: "4a0b04b3-a2cb-4885-af15-9a342e817b00", URLs: uls}
 
-			repo.Save(&user)
+			repo.Save(&user, true)
 
 			r, w := testRequest(t, "/api/user/urls", tt.token)
 			New(repo).Handle(w, r)

@@ -28,7 +28,11 @@ create table if not exists public.urls(
    	 original_url text not null,
    	 UNIQUE (user_id, short_url)
 );`
+	index := `
+create unique index concurrently if not exists original_url_idx on public.urls (original_url);
+`
 	db.Exec(query)
+	db.Exec(index)
 
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(5)

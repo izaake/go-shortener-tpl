@@ -61,7 +61,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	userID, _ := tokenutil.DecodeUserIDFromToken(token)
 	user := models.User{ID: userID, URLs: uls}
 
-	err = h.repo.Save(&user)
+	err = h.repo.Save(&user, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

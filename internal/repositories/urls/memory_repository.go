@@ -20,7 +20,7 @@ func NewMemoryRepository(baseURL string) Repository {
 	return &memoryRepository{Users: Users, BaseURL: baseURL}
 }
 
-func (r memoryRepository) Save(user *models.User) error {
+func (r memoryRepository) Save(user *models.User, ignoreConflicts bool) error {
 	if r.Users[user.ID] == nil {
 		r.Users[user.ID] = map[string]string{}
 	}

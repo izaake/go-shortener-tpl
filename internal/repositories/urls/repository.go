@@ -5,7 +5,7 @@ import "github.com/izaake/go-shortener-tpl/internal/models"
 // Repository Интерфейс для репозитория
 type Repository interface {
 	// Save сохраняет юзера с ссылками
-	Save(user *models.User) error
+	Save(user *models.User, ignoreConflicts bool) error
 
 	// FindOriginalURLByShortURL ищет полную ссылку по сокращённому варианту
 	FindOriginalURLByShortURL(url string) string

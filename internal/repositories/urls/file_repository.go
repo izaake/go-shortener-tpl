@@ -15,7 +15,7 @@ func NewFileRepository(fileName string) Repository {
 	return &fileRepository{fileName: fileName}
 }
 
-func (r fileRepository) Save(user *models.User) error {
+func (r fileRepository) Save(user *models.User, ignoreConflicts bool) error {
 	filePath := r.fileName
 	if filePath != "" {
 		err := file.WriteToFile(filePath, user)
